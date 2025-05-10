@@ -1,0 +1,21 @@
+1.0.1
+
+# Semantic Versioning Format: MAJOR.MINOR.PATCH
+
+## Version History
+
+### 1.0.1 - 2025-05-11
+- Update to version 1.0.1
+
+### 1.0.0 (Current) - 2024-05-11
+- Initial release
+- Firebase authentication (email/password and Google Sign-In)
+- Approval request management system
+- Real-time notifications (foreground, background, and closed app)
+- Python client tools for testing
+
+## Guidelines for Version Updates
+
+1. MAJOR version (1.x.x) - Incompatible API changes or significant redesigns
+2. MINOR version (x.1.x) - New functionality added in a backward compatible manner
+3. PATCH version (x.x.1) - Backward compatible bug fixes or minor improvements 

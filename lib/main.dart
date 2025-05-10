@@ -5,6 +5,7 @@ import 'package:approver/screens/wrapper.dart';
 import 'package:approver/services/auth_service.dart';
 import 'package:approver/models/app_user.dart';
 import 'package:approver/services/notification_service.dart';
+import 'package:approver/utils/version.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -12,6 +13,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Initialize app version
+  await AppVersion.init();
   
   final notificationService = NotificationService();
   await notificationService.init();
@@ -28,7 +32,7 @@ class MyApp extends StatelessWidget {
       initialData: null,
       value: AuthService().user,
       child: MaterialApp(
-        title: 'Approver',
+        title: 'Approver ${AppVersion.version}',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(

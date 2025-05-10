@@ -1,0 +1,87 @@
+name: Version Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      release_note:
+        description: 'Release note'
+        required: true
+        type: string
+      create_pr:
+        description: 'Create a pull request instead of pushing directly'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+      with:
+        ref: dev
+    
+    - name: Set up Dart
+      uses: dart-lang/setup-dart@v1
+    
+    - name: Bump version
+      run: |
+        dart scripts/bump_version.dart ${{ github.event.inputs.bump_type }} "${{ github.event.inputs.release_note }}"
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+    
+    - name: Get new version
+      id: get_version
+      run: |
+        echo "VERSION=$(head -n 1 VERSION)" >> $GITHUB_OUTPUT
+
+    - name: Commit changes
+      run: |
+        git add pubspec.yaml VERSION CHANGELOG.md
+        git commit -m "Bump version to ${{ steps.get_version.outputs.VERSION }}"
+    
+    - name: Create tag
+      run: |
+        git tag -a "v${{ steps.get_version.outputs.VERSION }}" -m "Version ${{ steps.get_version.outputs.VERSION }}"
+    
+    - name: Create Pull Request
+      if: ${{ github.event.inputs.create_pr == 'true' }}
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Bump version to ${{ steps.get_version.outputs.VERSION }}"
+        committer: GitHub Action <action@github.com>
+        author: GitHub Action <action@github.com>
+        branch: version-bump-${{ steps.get_version.outputs.VERSION }}
+        base: dev
+        delete-branch: true
+        title: "Bump version to ${{ steps.get_version.outputs.VERSION }}"
+        body: |
+          Automated version bump by GitHub Actions
+          
+          Bump type: ${{ github.event.inputs.bump_type }}
+          Release note: ${{ github.event.inputs.release_note }}
+          
+          This PR updates the following files:
+          - pubspec.yaml
+          - VERSION
+          - CHANGELOG.md
+          
+          The tag v${{ steps.get_version.outputs.VERSION }} has been created locally but will only be pushed when this PR is merged.
+        labels: |
+          version-bump
+          automated-pr 
