@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:approver/screens/wrapper.dart';
 import 'package:approver/services/auth_service.dart';
 import 'package:approver/models/app_user.dart';
+import 'package:approver/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -11,6 +12,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  final notificationService = NotificationService();
+  await notificationService.init();
+  
   runApp(const MyApp());
 }
 
