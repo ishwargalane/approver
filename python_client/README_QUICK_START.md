@@ -96,4 +96,28 @@ For more advanced testing scenarios:
 2. Watch a specific request from the generated batch:
    ```bash
    python3 watch_request.py --request-id=YOUR_REQUEST_ID
-   ``` 
+   ```
+
+## Testing Notifications
+
+In addition to the approval request generation tools, this folder includes scripts to test notifications:
+
+### Scripts for Notification Testing
+
+1. **test_notifications.py** - Sends basic test notifications
+2. **test_approval_notification.py** - Sends simulated approval request notifications
+
+### Testing Commands
+
+```bash
+# Send a basic notification to all devices subscribed to the topic:
+python test_notifications.py --service-account service-account-key.json --topic approval_requests
+
+# Send a notification to a specific device token:
+python test_notifications.py --service-account service-account-key.json --token "YOUR_DEVICE_TOKEN"
+
+# Send an approval request notification:
+python test_approval_notification.py --service-account service-account-key.json --topic approval_requests
+```
+
+Find more details in the test_notifications_README.md file. 

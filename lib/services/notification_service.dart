@@ -49,6 +49,10 @@ class NotificationService {
       );
     }
     
+    // Get and print token for testing
+    String? token = await getToken();
+    print('FCM Token for testing: $token');
+    
     // Initialize local notifications
     await _initLocalNotifications();
     
