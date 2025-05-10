@@ -16,6 +16,11 @@ on:
         description: 'Release note'
         required: true
         type: string
+      create_pr:
+        description: 'Create a pull request instead of pushing directly'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   bump-version:
@@ -53,9 +58,30 @@ jobs:
       run: |
         git tag -a "v${{ steps.get_version.outputs.VERSION }}" -m "Version ${{ steps.get_version.outputs.VERSION }}"
     
-    - name: Push changes
-      uses: ad-m/github-push-action@master
+    - name: Create Pull Request
+      if: ${{ github.event.inputs.create_pr == 'true' }}
+      uses: peter-evans/create-pull-request@v5
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: dev
-        tags: true 
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Bump version to ${{ steps.get_version.outputs.VERSION }}"
+        committer: GitHub Action <action@github.com>
+        author: GitHub Action <action@github.com>
+        branch: version-bump-${{ steps.get_version.outputs.VERSION }}
+        base: dev
+        delete-branch: true
+        title: "Bump version to ${{ steps.get_version.outputs.VERSION }}"
+        body: |
+          Automated version bump by GitHub Actions
+          
+          Bump type: ${{ github.event.inputs.bump_type }}
+          Release note: ${{ github.event.inputs.release_note }}
+          
+          This PR updates the following files:
+          - pubspec.yaml
+          - VERSION
+          - CHANGELOG.md
+          
+          The tag v${{ steps.get_version.outputs.VERSION }} has been created locally but will only be pushed when this PR is merged.
+        labels: |
+          version-bump
+          automated-pr 

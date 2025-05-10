@@ -11,6 +11,7 @@ RELEASE_NOTE="${@:2}"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 # Print header
@@ -47,15 +48,14 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     git tag -a "v${VERSION}" -m "Version ${VERSION}"
     echo -e "${GREEN}Created tag v${VERSION}${NC}"
     
-    # Ask if user wants to push
-    echo -e "${GREEN}Do you want to push the changes and tag? (y/n)${NC}"
-    read -r push_response
-    if [[ "$push_response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-      git push origin dev
-      git push origin "v${VERSION}"
-      echo -e "${GREEN}Pushed changes and tag to remote${NC}"
-    fi
+    # Remind user about push option without pushing
+    echo -e "${YELLOW}NOTE: Changes are committed locally but not pushed to remote.${NC}"
+    echo -e "${YELLOW}To push these changes to GitHub, use:${NC}"
+    echo -e "${YELLOW}  git push origin dev${NC}"
+    echo -e "${YELLOW}  git push origin v${VERSION}${NC}"
   fi
+else
+  echo -e "${YELLOW}Changes are saved locally but not committed.${NC}"
 fi
 
 echo -e "${GREEN}✅ Done!${NC}" 
