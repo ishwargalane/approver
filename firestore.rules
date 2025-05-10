@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to read all approval requests
+    match /approvals/{approvalId} {
+      allow read: if request.auth != null;
+      
+      // Allow users to create approval requests if they're authenticated
+      allow create: if request.auth != null;
+      
+      // Allow users to update only status field of approval requests
+      allow update: if request.auth != null &&
+                     request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['status']);
+      
+      // Only allow deletion if the user is the creator of the request
+      allow delete: if request.auth != null && 
+                     resource.data.requesterId == request.auth.uid;
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
