@@ -3,29 +3,24 @@ import os
 import requests
 import json
 import argparse
-import tempfile
 
 """
 This script sends a test notification via Firebase Cloud Messaging.
-It supports both service account key file and environment variables for authentication.
+Make sure you have a service account key file from Firebase to use this script.
 """
 
-def send_test_notification(service_account_path=None, device_token=None, topic=None):
-    # Get the access token, either from file or environment variables
+def send_test_notification(service_account_path, device_token=None, topic=None):
+    # Get the access token
     access_token = get_access_token(service_account_path)
     
     if not access_token:
         print("Failed to get access token")
         return False
     
-    # Get project ID from service account or environment
-    project_id = get_project_id(service_account_path)
-    if not project_id:
-        print("Failed to get project ID")
-        return False
-    
     # FCM API URL
-    fcm_url = f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
+    fcm_url = "https://fcm.googleapis.com/v1/projects/{}/messages:send".format(
+        get_project_id(service_account_path)
+    )
     
     # Headers
     headers = {
@@ -96,36 +91,11 @@ def send_test_notification(service_account_path=None, device_token=None, topic=N
         print(f"Error sending notification: {e}")
         return False
 
-def get_access_token(service_account_path=None):
-    """Gets an OAuth2 access token using either service account file or environment variables."""
+def get_access_token(service_account_path):
+    """Gets an OAuth2 access token using the service account credentials."""
     try:
-        # Check if environment variables are set
-        if os.environ.get('FIREBASE_PRIVATE_KEY') and os.environ.get('FIREBASE_CLIENT_EMAIL'):
-            print("Using credentials from environment variables")
-            # Create a temporary service account file from environment variables
-            service_account_info = {
-                "type": "service_account",
-                "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
-                "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID', "private_key_id"),
-                "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
-                "client_email": os.environ.get('FIREBASE_CLIENT_EMAIL'),
-                "client_id": os.environ.get('FIREBASE_CLIENT_ID', "client_id"),
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": os.environ.get('FIREBASE_CLIENT_X509_CERT_URL', "")
-            }
-        # Otherwise, use the service account file
-        elif service_account_path:
-            print(f"Using credentials from file: {service_account_path}")
-            with open(service_account_path) as f:
-                service_account_info = json.load(f)
-        else:
-            print("Error: No credentials provided. Either set environment variables or provide a service account file.")
-            print("Required environment variables: FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL, FIREBASE_PROJECT_ID")
-            return None
+        service_account_info = json.load(open(service_account_path))
         
-        # Get the JWT token
         url = "https://oauth2.googleapis.com/token"
         payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
@@ -141,7 +111,7 @@ def get_access_token(service_account_path=None):
             print(f"Error getting access token: {response.text}")
             return None
     except Exception as e:
-        print(f"Error reading credentials: {e}")
+        print(f"Error reading service account file: {e}")
         return None
 
 def create_jwt(service_account_info):
@@ -171,52 +141,25 @@ def create_jwt(service_account_info):
     
     return signed_jwt
 
-def get_project_id(service_account_path=None):
-    """Gets the project ID from the service account file or environment."""
+def get_project_id(service_account_path):
+    """Gets the project ID from the service account file."""
     try:
-        # Try environment variables first
-        if os.environ.get('FIREBASE_PROJECT_ID'):
-            return os.environ.get('FIREBASE_PROJECT_ID')
-        
-        # Otherwise use the service account file
-        if service_account_path:
-            with open(service_account_path) as f:
-                service_account_info = json.load(f)
-            return service_account_info["project_id"]
-        
-        print("Error: No project ID found. Set FIREBASE_PROJECT_ID or provide a service account file.")
-        return None
+        service_account_info = json.load(open(service_account_path))
+        return service_account_info["project_id"]
     except Exception as e:
         print(f"Error reading project ID: {e}")
         return None
 
-def print_env_var_instructions():
-    """Prints instructions for setting environment variables."""
-    print("\nTo use environment variables instead of a service account file, set the following:")
-    print("  export FIREBASE_PROJECT_ID='your-project-id'")
-    print("  export FIREBASE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n'")
-    print("  export FIREBASE_CLIENT_EMAIL='firebase-adminsdk-xxxx@your-project.iam.gserviceaccount.com'")
-    print("\nOptional environment variables:")
-    print("  export FIREBASE_PRIVATE_KEY_ID='private-key-id'")
-    print("  export FIREBASE_CLIENT_ID='client-id'")
-    print("  export FIREBASE_CLIENT_X509_CERT_URL='cert-url'")
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Send a test notification via Firebase Cloud Messaging')
     
-    parser.add_argument('--service-account', '-s', 
-                        help='Path to the Firebase service account key file (JSON). Optional if using environment variables.')
+    parser.add_argument('--service-account', '-s', required=True,
+                        help='Path to the Firebase service account key file (JSON)')
     
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--token', '-t', help='Device token to send the notification to')
     group.add_argument('--topic', '-o', help='Topic to send the notification to')
     
-    parser.add_argument('--env-help', action='store_true', help='Show instructions for setting environment variables')
-    
     args = parser.parse_args()
-    
-    if args.env_help:
-        print_env_var_instructions()
-        exit(0)
     
     send_test_notification(args.service_account, args.token, args.topic) 
