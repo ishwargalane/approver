@@ -5,6 +5,7 @@ import 'package:approver/services/notification_service.dart';
 import 'package:approver/models/approval_request.dart';
 import 'package:approver/widgets/request_card.dart';
 import 'package:approver/screens/request_details_screen.dart';
+import 'package:approver/widgets/version_display.dart';
 import 'package:provider/provider.dart';
 import 'package:approver/models/app_user.dart';
 
@@ -164,6 +165,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               },
             ),
+          ),
+          // Version display footer
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0, top: 8.0),
+            child: VersionDisplay(),
           ),
         ],
       ),
