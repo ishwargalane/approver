@@ -1,88 +1,152 @@
 # Approver
 
-A Flutter application for managing approval requests with Firebase integration.
+A Flutter application for managing approval requests with Firebase integration. This app allows users to submit requests for approval, view pending requests, and approve or reject them.
 
 ## Features
 
-- Sign in with Google
-- View pending approval requests
-- Approve or reject requests
-- Receive notifications for new requests
-- Python client for submitting approval requests
+- User authentication (Email/Password and Google Sign-In)
+- Dashboard view of all approval requests
+- Detailed request viewing with approval/rejection capability
+- Firestore database integration for real-time updates
+- Python client toolkit for testing and automation
 
-## Setup
+## Getting Started
 
-### Flutter App Setup
+This guide will help you set up the Approver app for development.
 
-1. **Firebase Project Setup**
+### Prerequisites
 
-   - Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com/)
-   - Enable Firestore database
-   - Set up Authentication and enable Google Sign-in
+- [Flutter](https://flutter.dev/docs/get-started/install) (stable channel)
+- [Firebase account](https://firebase.google.com/)
+- [Git](https://git-scm.com/)
+- [Python](https://www.python.org/) 3.7+ (for testing tools)
 
-2. **Configure Firebase in Flutter**
+### 1. Clone the Repository
 
-   - Install FlutterFire CLI:
-     ```
-     dart pub global activate flutterfire_cli
-     ```
-   - Configure Firebase:
-     ```
-     flutterfire configure --project=your-firebase-project-id
-     ```
-   - This will generate the necessary configuration files for Android/iOS
+```bash
+git clone https://github.com/ishwargalane/approver.git
+cd approver
+```
 
-3. **Run the App**
+### 2. Firebase Project Setup
 
-   - Install dependencies:
-     ```
-     flutter pub get
-     ```
-   - Run the app:
-     ```
-     flutter run
-     ```
+1. **Create a Firebase Project**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/)
+   - Click "Add project" and follow the setup wizard
+   - Enable Google Analytics if desired
 
-### Android Setup
+2. **Enable Authentication Methods**:
+   - In the Firebase Console, go to Authentication > Sign-in method
+   - Enable Email/Password
+   - Enable Google Sign-in
+   
+3. **Set Up Firestore Database**:
+   - Go to Firestore Database in the Firebase Console
+   - Create a database (start in test mode for development)
+   - Choose a location close to your users
 
-1. **Configure Android**
+4. **Register Your App**:
+   - In the Firebase project settings, add a new Android/iOS app
+   - Use package name `com.approverapp.approver` for Android
+   - Download the google-services.json file (for Android) or GoogleService-Info.plist (for iOS)
 
-   - Update `android/app/build.gradle` with your package name and applicationId
-   - Ensure `minSdkVersion` is set to 21 or higher in `android/app/build.gradle`
-   - Add Google Services plugin in `android/build.gradle`
-
-2. **Google Sign-In Setup**
-
-   - Follow the instructions at [Google Sign-In for Android](https://developers.google.com/identity/sign-in/android/start-integrating)
-   - Add your SHA-1 key to Firebase project settings
-
-### Python Client Setup
-
-1. **Firebase Admin SDK**
-
-   - Generate a new private key for your service account in Firebase Project Settings > Service Accounts
-   - Save the JSON file securely
-
-2. **Install Dependencies**
-
+5. **Add Security Rules**:
+   - Copy and paste the following rules into Firestore Rules:
    ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /approvals/{approvalId} {
+         allow read: if request.auth != null;
+         allow create: if request.auth != null;
+         allow update: if request.auth != null;
+         allow delete: if request.auth != null && resource.data.requesterId == request.auth.uid;
+       }
+     }
+   }
+   ```
+
+### 3. Flutter App Configuration
+
+1. **Install Dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+2. **Configure Firebase for Flutter**:
+   - Install FlutterFire CLI:
+   ```bash
+   dart pub global activate flutterfire_cli
+   ```
+   
+   - Configure Firebase:
+   ```bash
+   flutterfire configure --project=your-firebase-project-id
+   ```
+   - Select the platforms you want to support
+
+3. **Android-specific Setup**:
+   - Place the google-services.json in android/app/
+   - Get your SHA-1 fingerprint:
+   ```bash
+   cd android && ./gradlew signingReport
+   ```
+   - Add the SHA-1 fingerprint to your Firebase project in Project Settings > Your Apps > Android Apps > Add fingerprint
+
+4. **iOS-specific Setup**:
+   - Place the GoogleService-Info.plist in ios/Runner/
+   - Update iOS deployment target to 12.0 or higher in Xcode
+
+5. **Run the App**:
+   ```bash
+   flutter run
+   ```
+
+### 4. Python Testing Tools Setup
+
+The project includes Python scripts for testing and generating sample requests:
+
+1. **Set Up Firebase Admin SDK**:
+   - Go to Firebase Console > Project Settings > Service Accounts
+   - Click "Generate new private key"
+   - Save the JSON file as `python_client/service-account-key.json`
+
+2. **Install Dependencies**:
+   ```bash
    cd python_client
    pip install -r requirements.txt
    ```
 
-3. **Use the Client**
-
+3. **Using the Testing Tools**:
+   - Create and monitor a request:
+   ```bash
+   python3 create_and_watch_request.py
    ```
-   # Create a new request
-   python approval_client.py --credentials=/path/to/credentials.json create --title="New Request" --description="Request description" --requester-id="user123" --requester-email="user@example.com"
    
-   # Check request status
-   python approval_client.py --credentials=/path/to/credentials.json check --request-id=YOUR_REQUEST_ID
+   - Generate multiple test requests:
+   ```bash
+   python3 generate_test_data.py --count=5
    ```
+   
+   - Watch an existing request:
+   ```bash
+   python3 watch_request.py --request-id=YOUR_REQUEST_ID
+   ```
+
+   See `python_client/README_QUICK_START.md` for more details.
+
+## Project Structure
+
+- `lib/`: Flutter application code
+  - `models/`: Data models
+  - `screens/`: UI screens
+  - `services/`: Firebase integration services
+  - `widgets/`: Reusable UI components
+- `python_client/`: Python tools for testing
+- `android/`: Android-specific code
+- `ios/`: iOS-specific code
 
 ## Firestore Data Structure
-
-The application uses the following Firestore structure:
 
 ```
 /approvals/{document_id}
@@ -94,6 +158,20 @@ The application uses the following Firestore structure:
   - status: string (pending/approved/rejected)
 ```
 
+## Troubleshooting
+
+- **Google Sign-In Issues**: Ensure SHA-1 fingerprint is correctly added to Firebase
+- **Firebase Connection Errors**: Verify firebase_options.dart is correctly generated
+- **Android Build Failures**: Check compileSdk and targetSdk versions in build.gradle.kts
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
