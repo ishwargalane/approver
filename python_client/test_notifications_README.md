@@ -72,3 +72,45 @@ This will be printed when the app starts up. You can copy this token to use in t
    - Send a notification
    - Verify it appears in the system notification tray
    - Tap the notification to ensure it launches the app
+
+## Authentication Options
+
+There are two ways to authenticate with Firebase:
+
+### Option 1: Service Account Key File
+
+1. Download a service account key file from the Firebase Console
+2. Save it as `service-account-key.json` in this directory
+3. Pass the path to the file when running the scripts
+
+```bash
+python test_notifications.py --service-account service-account-key.json --topic approval_requests
+```
+
+### Option 2: Environment Variables (Recommended for Security)
+
+You can use environment variables instead of storing the service account key in a file:
+
+```bash
+# Required variables
+export FIREBASE_PROJECT_ID='your-project-id'
+export FIREBASE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n'
+export FIREBASE_CLIENT_EMAIL='firebase-adminsdk-xxxx@your-project.iam.gserviceaccount.com'
+
+# Optional variables
+export FIREBASE_PRIVATE_KEY_ID='private-key-id'
+export FIREBASE_CLIENT_ID='client-id'
+export FIREBASE_CLIENT_X509_CERT_URL='cert-url'
+```
+
+Then run the scripts without the service account parameter:
+
+```bash
+python test_notifications.py --topic approval_requests
+```
+
+For help with environment variables, run:
+
+```bash
+python test_notifications.py --env-help
+```
