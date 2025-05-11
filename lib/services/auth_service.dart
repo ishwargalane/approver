@@ -198,7 +198,7 @@ class AuthService {
       await _auth.signOut();
     } catch (e) {
       print('Error signing out: $e');
-      throw e;
+      rethrow;
     }
   }
 } 

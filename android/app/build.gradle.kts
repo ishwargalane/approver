@@ -23,8 +23,8 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.approverapp.approver"
-        // Minimum SDK version for Firebase is 21
-        minSdk = 21
+        // Minimum SDK version for Firebase is 23
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"

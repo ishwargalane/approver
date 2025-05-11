@@ -24,8 +24,6 @@ class RequestCard extends StatelessWidget {
         return 'green';
       case ApprovalStatus.rejected:
         return 'red';
-      default:
-        return 'grey';
     }
   }
 
