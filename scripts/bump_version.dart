@@ -105,7 +105,7 @@ Future<void> updateVersions(BumpType bumpType, String releaseNote) async {
   final versionFile = File('VERSION');
   if (versionFile.existsSync()) {
     String versionFileContent = await versionFile.readAsString();
-    versionFileContent = '$newVersionString\n' + versionFileContent.substring(versionFileContent.indexOf('\n') + 1);
+    versionFileContent = '$newVersionString\n${versionFileContent.substring(versionFileContent.indexOf('\n') + 1)}';
     
     // Update version history section
     final date = DateTime.now().toString().split(' ')[0];
@@ -142,9 +142,7 @@ Future<void> updateVersions(BumpType bumpType, String releaseNote) async {
     // Find position to insert (after header and before first version entry)
     final headerEndPos = changelogContent.indexOf('## [');
     if (headerEndPos != -1) {
-      changelogContent = changelogContent.substring(0, headerEndPos) + 
-                        changeLogEntry + '\n' + 
-                        changelogContent.substring(headerEndPos);
+      changelogContent = '${changelogContent.substring(0, headerEndPos)}$changeLogEntry\n${changelogContent.substring(headerEndPos)}';
     }
     
     await changelogFile.writeAsString(changelogContent);
@@ -169,6 +167,6 @@ Example:
 // String extension for capitalization
 extension StringExtension on String {
   String capitalize() {
-    return '${this[0].toUpperCase()}${this.substring(1)}';
+    return '${this[0].toUpperCase()}${substring(1)}';
   }
 } 

@@ -36,22 +36,22 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Firebase dependencies
-  firebase_core: ^2.27.1
-  firebase_auth: ^4.18.1
-  cloud_firestore: ^4.15.9
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.3
+  cloud_firestore: ^5.6.7
   
   # Google Sign-in
   google_sign_in: ^6.2.1
   
   # Notifications
-  firebase_messaging: ^14.8.15
+  firebase_messaging: ^15.2.5
   
   # State management
   provider: ^6.1.2
   
   # UI elements
   flutter_spinkit: ^5.2.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   flutter_local_notifications: ^19.2.0
   
   # App information
