@@ -7,8 +7,8 @@ class DatabaseService {
   final NotificationService _notificationService = NotificationService();
 
   // Collection references
-  final CollectionReference _approvalsCollection = 
-      FirebaseFirestore.instance.collection('approvals');
+  CollectionReference get _approvalsCollection => 
+      _firestore.collection('approvals');
 
   // Get all approval requests for a user (assigned to them)
   Stream<List<ApprovalRequest>> getApprovalRequests() {
@@ -64,7 +64,7 @@ class DatabaseService {
       }
     } catch (e) {
       print('Error updating approval status: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -83,7 +83,7 @@ class DatabaseService {
       return requestId;
     } catch (e) {
       print('Error creating approval request: $e');
-      throw e;
+      rethrow;
     }
   }
   
@@ -100,16 +100,14 @@ class DatabaseService {
               
               // Don't show notifications for requests older than 1 minute
               // This prevents showing notifications for all existing requests when the app starts
-              if (request.createdAt != null) {
-                final now = DateTime.now();
-                final requestTime = (request.createdAt as Timestamp).toDate();
-                final difference = now.difference(requestTime).inMinutes;
-                
-                if (difference <= 1) {
-                  _notificationService.showApprovalRequestNotification(request);
-                }
+              final now = DateTime.now();
+              final requestTime = (request.createdAt as Timestamp).toDate();
+              final difference = now.difference(requestTime).inMinutes;
+              
+              if (difference <= 1) {
+                _notificationService.showApprovalRequestNotification(request);
               }
-            }
+                        }
           }
         });
   }
