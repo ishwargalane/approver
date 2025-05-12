@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'package:approver/screens/wrapper.dart';
 import 'package:approver/services/auth_service.dart';
@@ -8,11 +9,22 @@ import 'package:approver/services/notification_service.dart';
 import 'package:approver/utils/version.dart';
 import 'firebase_options.dart';
 
+// Define top-level handler for background messages
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Need to ensure Firebase is initialized here
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('Handling a background message: ${message.messageId}');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Set the background message handler before initializing the notification service
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   
   // Initialize app version
   await AppVersion.init();

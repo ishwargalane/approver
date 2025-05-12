@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:approver/models/approval_request.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 
 // Define a top-level function to handle background messages
 @pragma('vm:entry-point')
@@ -47,6 +48,17 @@ class NotificationService {
         badge: true,
         sound: true,
       );
+    } else if (Platform.isAndroid) {
+      // Request permission for Android devices (Android 13+)
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        criticalAlert: true,
+        provisional: false,
+      );
+      
+      print('User granted permission: ${settings.authorizationStatus}');
     }
     
     // Get and print token for testing
@@ -107,7 +119,10 @@ class NotificationService {
           _channelId,
           _channelName,
           description: _channelDescription,
-          importance: Importance.high,
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
         ),
       );
     }
@@ -148,16 +163,26 @@ class NotificationService {
       _channelId,
       _channelName,
       channelDescription: _channelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: Importance.max,
+      priority: Priority.max,
       ticker: 'ticker',
       icon: '@mipmap/ic_launcher',
+      visibility: NotificationVisibility.public,
+      enableLights: true,
+      playSound: true,
+      enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
     );
     
     final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'default',
+      badgeNumber: 1,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
     
     final NotificationDetails platformDetails = NotificationDetails(
@@ -231,5 +256,55 @@ class NotificationService {
   Future<void> unsubscribeFromApprovalRequests() async {
     await _firebaseMessaging.unsubscribeFromTopic('approval_requests');
     print('Unsubscribed from approval_requests topic');
+  }
+  
+  // For testing notifications manually from within the app
+  Future<void> testManualNotification() async {
+    // Alternate between two types of notifications from Python client
+    if (DateTime.now().second % 2 == 0) {
+      await simulateApprovalRequestNotification();
+    } else {
+      await simulateGenericTestNotification();
+    }
+  }
+  
+  // Simulates the test_notifications.py script from Python client
+  Future<void> simulateGenericTestNotification() async {
+    final Map<String, dynamic> dataPayload = {
+      'type': 'test',
+      'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+    };
+    
+    await showLocalNotification(
+      title: 'Test Notification',
+      body: 'This is a test notification from Firebase Cloud Messaging',
+      payload: json.encode(dataPayload),
+    );
+    
+    print('Simulated generic test notification (test_notifications.py)');
+  }
+  
+  // Simulates the test_approval_notification.py script from Python client
+  Future<void> simulateApprovalRequestNotification() async {
+    final String requestId = 'test-${DateTime.now().millisecondsSinceEpoch}';
+    final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    
+    final Map<String, dynamic> dataPayload = {
+      'type': 'approval_request',
+      'requestId': requestId,
+      'title': 'Test Approval',
+      'description': 'This is a test approval request',
+      'requesterEmail': 'test@example.com',
+      'createdAt': timestamp.toString(),
+      'click_action': 'FLUTTER_NOTIFICATION_CLICK'
+    };
+    
+    await showLocalNotification(
+      title: 'New Approval Request',
+      body: 'Please review the request from test@example.com',
+      payload: json.encode(dataPayload),
+    );
+    
+    print('Simulated approval request notification (test_approval_notification.py)');
   }
 } 

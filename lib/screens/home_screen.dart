@@ -80,6 +80,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await _notificationService.testManualNotification();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Test notification sent')),
+          );
+        },
+        tooltip: 'Test Notification',
+        child: const Icon(Icons.notifications),
+      ),
       body: Column(
         children: [
           Padding(
