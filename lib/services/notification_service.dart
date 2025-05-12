@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:approver/models/approval_request.dart';
+import 'package:approver/services/notification_action_service.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -100,13 +101,14 @@ class NotificationService {
       iOS: iosInitSettings,
     );
     
-    // Initialize plugin
+    // Initialize plugin with background handlers for actions
     await _flutterLocalNotificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse details) {
         // Handle notification tap
         _handleLocalNotificationTap(details.payload);
       },
+      onDidReceiveBackgroundNotificationResponse: onActionReceivedBackground,
     );
     
     // Create the notification channel for Android
@@ -135,25 +137,49 @@ class NotificationService {
     
     if (message.notification != null) {
       // Show a local notification when app is in foreground
-      showLocalNotification(
-        title: message.notification?.title ?? 'New Approval Request',
-        body: message.notification?.body ?? 'Check the app for details',
-        payload: json.encode(message.data),
-      );
+      if (message.data['type'] == 'approval_request' || 
+          (message.data['requestId'] != null && message.data['requestId'].isNotEmpty)) {
+        // If it's an approval request, add action buttons
+        showApprovalNotificationWithActions(
+          title: message.notification?.title ?? 'New Approval Request',
+          body: message.notification?.body ?? 'Check the app for details',
+          requestId: message.data['requestId'] ?? '',
+          payload: json.encode(message.data),
+        );
+      } else {
+        // Regular notification without actions
+        showLocalNotification(
+          title: message.notification?.title ?? 'New Notification',
+          body: message.notification?.body ?? 'Check the app for details',
+          payload: json.encode(message.data),
+        );
+      }
     } else if (message.data.isNotEmpty) {
       // If there's no notification but there is data, create a notification from data
-      final String title = message.data['title'] ?? 'New Approval Request';
+      final String title = message.data['title'] ?? 'New Notification';
       final String body = message.data['body'] ?? 'Check the app for details';
       
-      showLocalNotification(
-        title: title,
-        body: body,
-        payload: json.encode(message.data),
-      );
+      if (message.data['type'] == 'approval_request' || 
+          (message.data['requestId'] != null && message.data['requestId'].isNotEmpty)) {
+        // If it's an approval request, add action buttons
+        showApprovalNotificationWithActions(
+          title: title,
+          body: body,
+          requestId: message.data['requestId'] ?? '',
+          payload: json.encode(message.data),
+        );
+      } else {
+        // Regular notification without actions
+        showLocalNotification(
+          title: title,
+          body: body,
+          payload: json.encode(message.data),
+        );
+      }
     }
   }
   
-  // Show local notification - made public so it can be called from other services
+  // Show regular local notification without actions
   Future<void> showLocalNotification({
     required String title,
     required String body,
@@ -199,6 +225,61 @@ class NotificationService {
     );
   }
   
+  // Show approval notification with approve/reject actions
+  Future<void> showApprovalNotificationWithActions({
+    required String title,
+    required String body,
+    required String requestId,
+    String? payload,
+  }) async {
+    // Add approve/reject actions for Android
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.max,
+      priority: Priority.max,
+      ticker: 'ticker',
+      icon: '@mipmap/ic_launcher',
+      visibility: NotificationVisibility.public,
+      enableLights: true,
+      playSound: true,
+      enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+      category: AndroidNotificationCategory.message,
+      fullScreenIntent: true,
+      actions: NotificationActionService.getApprovalActions(),
+    );
+    
+    // iOS doesn't support notification actions in the same way as Android
+    final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      sound: 'default',
+      badgeNumber: 1,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+    
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+    
+    // Use the request ID as part of the notification ID to ensure uniqueness
+    // Convert the ID to an integer (hash code) since notification IDs must be integers
+    int notificationId = requestId.hashCode;
+    if (notificationId < 0) notificationId = -notificationId; // Ensure positive
+    
+    await _flutterLocalNotificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      platformDetails,
+      payload: payload,
+    );
+  }
+  
   // Check if app was opened from a notification
   Future<void> _checkInitialMessage() async {
     // Get any message that caused the app to open
@@ -236,12 +317,15 @@ class NotificationService {
   
   // Show notification for new approval request
   Future<void> showApprovalRequestNotification(ApprovalRequest request) async {
-    await showLocalNotification(
+    await showApprovalNotificationWithActions(
       title: 'New Approval Request: ${request.title}',
       body: 'From: ${request.requesterEmail}',
+      requestId: request.id,
       payload: json.encode({
         'type': 'approval_request',
         'requestId': request.id,
+        'title': request.title,
+        'requesterEmail': request.requesterEmail,
       }),
     );
   }
@@ -299,9 +383,10 @@ class NotificationService {
       'click_action': 'FLUTTER_NOTIFICATION_CLICK'
     };
     
-    await showLocalNotification(
+    await showApprovalNotificationWithActions(
       title: 'New Approval Request',
       body: 'Please review the request from test@example.com',
+      requestId: requestId,
       payload: json.encode(dataPayload),
     );
     
