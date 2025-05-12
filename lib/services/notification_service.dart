@@ -134,16 +134,41 @@ class NotificationService {
   void _handleForegroundMessage(RemoteMessage message) {
     print('Got a message whilst in the foreground!');
     print('Message data: ${message.data}');
+    print('Message notification: ${message.notification?.title}, ${message.notification?.body}');
+    
+    // Determine if this is an approval request by checking multiple possible fields
+    bool isApprovalRequest = false;
+    String requestId = '';
+    
+    // Check for type field
+    if (message.data['type'] == 'approval_request') {
+      isApprovalRequest = true;
+      requestId = message.data['requestId'] ?? '';
+    } 
+    // Check for requestId field
+    else if (message.data['requestId'] != null && message.data['requestId'].toString().isNotEmpty) {
+      isApprovalRequest = true;
+      requestId = message.data['requestId'] ?? '';
+    }
+    // Python client specific check
+    else if (message.data['title']?.toString().toLowerCase().contains('approval') == true) {
+      isApprovalRequest = true;
+      // Generate a request ID if one doesn't exist
+      requestId = message.data['requestId'] ?? 'gen-${DateTime.now().millisecondsSinceEpoch}';
+    }
+    
+    // For debugging Python client messages
+    print('Is approval request: $isApprovalRequest, Request ID: $requestId');
+    print('Full message data: ${message.data}');
     
     if (message.notification != null) {
       // Show a local notification when app is in foreground
-      if (message.data['type'] == 'approval_request' || 
-          (message.data['requestId'] != null && message.data['requestId'].isNotEmpty)) {
+      if (isApprovalRequest) {
         // If it's an approval request, add action buttons
         showApprovalNotificationWithActions(
           title: message.notification?.title ?? 'New Approval Request',
           body: message.notification?.body ?? 'Check the app for details',
-          requestId: message.data['requestId'] ?? '',
+          requestId: requestId,
           payload: json.encode(message.data),
         );
       } else {
@@ -159,13 +184,12 @@ class NotificationService {
       final String title = message.data['title'] ?? 'New Notification';
       final String body = message.data['body'] ?? 'Check the app for details';
       
-      if (message.data['type'] == 'approval_request' || 
-          (message.data['requestId'] != null && message.data['requestId'].isNotEmpty)) {
+      if (isApprovalRequest) {
         // If it's an approval request, add action buttons
         showApprovalNotificationWithActions(
           title: title,
           body: body,
-          requestId: message.data['requestId'] ?? '',
+          requestId: requestId,
           payload: json.encode(message.data),
         );
       } else {
