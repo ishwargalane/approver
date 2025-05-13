@@ -5,6 +5,7 @@ import 'package:approver/services/notification_action_service.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Define a top-level function to handle background messages
 @pragma('vm:entry-point')
@@ -88,11 +89,32 @@ class NotificationService {
     final AndroidInitializationSettings androidInitSettings = 
         AndroidInitializationSettings('@mipmap/ic_launcher');
     
-    // iOS initialization
+    // iOS initialization with categories for action buttons
     final DarwinInitializationSettings iosInitSettings = DarwinInitializationSettings(
       requestAlertPermission: false, // Already requested in FCM
       requestBadgePermission: false, // Already requested in FCM
       requestSoundPermission: false, // Already requested in FCM
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'APPROVAL_REQUEST',
+          actions: [
+            DarwinNotificationAction.plain(
+              'approve',
+              'Approve',
+              options: {DarwinNotificationActionOption.destructive}, // Remove foreground option
+            ),
+            DarwinNotificationAction.plain(
+              'reject',
+              'Reject',
+              options: {DarwinNotificationActionOption.destructive}, // Remove foreground option
+            ),
+          ],
+          options: {
+            DarwinNotificationCategoryOption.allowAnnouncement,
+            DarwinNotificationCategoryOption.hiddenPreviewShowTitle,
+          },
+        ),
+      ],
     );
     
     // Initialize settings
@@ -256,6 +278,15 @@ class NotificationService {
     required String requestId,
     String? payload,
   }) async {
+    // Create a proper payload with requestId if not provided
+    final String finalPayload = payload ?? json.encode({
+      'requestId': requestId, 
+      'type': 'approval_request',
+    });
+    
+    // Debug log the payload
+    print('🔔 Showing notification with payload: $finalPayload');
+    
     // Add approve/reject actions for Android
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       _channelId,
@@ -275,7 +306,7 @@ class NotificationService {
       actions: NotificationActionService.getApprovalActions(),
     );
     
-    // iOS doesn't support notification actions in the same way as Android
+    // iOS notification with category for actions
     final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
@@ -283,6 +314,7 @@ class NotificationService {
       sound: 'default',
       badgeNumber: 1,
       interruptionLevel: InterruptionLevel.timeSensitive,
+      categoryIdentifier: 'APPROVAL_REQUEST', // Link to the category defined in initialization
     );
     
     final NotificationDetails platformDetails = NotificationDetails(
@@ -300,7 +332,7 @@ class NotificationService {
       title,
       body,
       platformDetails,
-      payload: payload,
+      payload: finalPayload,
     );
   }
   
@@ -397,6 +429,21 @@ class NotificationService {
     final String requestId = 'test-${DateTime.now().millisecondsSinceEpoch}';
     final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     
+    // Create a Firestore document for the test request
+    try {
+      await FirebaseFirestore.instance.collection('approvals').doc(requestId).set({
+        'title': 'Test Approval',
+        'description': 'This is a test approval request',
+        'requesterEmail': 'test@example.com',
+        'requesterId': 'app-client',
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending'
+      });
+      print('Created Firestore document for test notification: $requestId');
+    } catch (e) {
+      print('Error creating Firestore document: $e');
+    }
+    
     final Map<String, dynamic> dataPayload = {
       'type': 'approval_request',
       'requestId': requestId,
@@ -414,6 +461,6 @@ class NotificationService {
       payload: json.encode(dataPayload),
     );
     
-    print('Simulated approval request notification (test_approval_notification.py)');
+    print('Simulated approval request notification with document ID: $requestId');
   }
 } 

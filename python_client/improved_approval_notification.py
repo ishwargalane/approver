@@ -4,14 +4,52 @@ import requests
 import json
 import argparse
 import time
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 """
 Improved script for sending approval request notifications to the Approver app.
-This script sends a notification that is compatible with the action buttons feature.
+This script creates a proper Firestore document and sends a notification that will show action buttons.
+
+Installation:
+pip install firebase-admin requests PyJWT
 """
 
 def send_approval_notification(service_account_path, device_token=None, topic=None):
-    # Get the access token
+    # Initialize Firebase Admin if not already initialized
+    try:
+        app = firebase_admin.get_app()
+    except ValueError:
+        cred = credentials.Certificate(service_account_path)
+        app = firebase_admin.initialize_app(cred)
+    
+    # Create Firestore client
+    db = firestore.client()
+    
+    # Generate a unique request ID
+    request_id = "py-test-{}".format(int(time.time()))
+    timestamp = firestore.SERVER_TIMESTAMP
+    
+    # Create the approval request document in Firestore
+    print(f"Creating Firestore document with ID: {request_id}")
+    request_data = {
+        "title": "Test Approval",
+        "description": "This is a test approval request created by the Python client",
+        "requesterEmail": "test@example.com",
+        "requesterId": "python-client",
+        "createdAt": timestamp,
+        "status": "pending"
+    }
+    
+    try:
+        # Add document with custom ID
+        db.collection('approvals').document(request_id).set(request_data)
+        print("✅ Firestore document created successfully")
+    except Exception as e:
+        print(f"❌ Error creating Firestore document: {e}")
+        return False
+    
+    # Get the access token for FCM
     access_token = get_access_token(service_account_path)
     
     if not access_token:
@@ -29,21 +67,18 @@ def send_approval_notification(service_account_path, device_token=None, topic=No
         'Content-Type': 'application/json'
     }
     
-    # Generate a unique request ID
-    request_id = "py-test-{}".format(int(time.time()))
-    
-    # Message payload designed to work with the notification action buttons
+    # Message payload designed to match the old client format but with proper action support
     message = {
         "notification": {
             "title": "New Approval Request",
-            "body": "Please review and approve or reject this request"
+            "body": "Please review the request from test@example.com"
         },
         "data": {
-            "type": "approval_request",  # Important for action button detection
-            "requestId": request_id,     # Required for action buttons
-            "title": "Python Client Request",
-            "description": "This request was sent from the improved Python client",
-            "requesterEmail": "python-client@example.com",
+            "type": "approval_request",
+            "requestId": request_id,
+            "title": "Test Approval",
+            "description": "This is a test approval request",
+            "requesterEmail": "test@example.com",
             "createdAt": str(int(time.time())),
             "click_action": "FLUTTER_NOTIFICATION_CLICK"
         },
@@ -51,7 +86,7 @@ def send_approval_notification(service_account_path, device_token=None, topic=No
             "priority": "high",
             "notification": {
                 "channel_id": "approver_channel",
-                "click_action": "FLUTTER_NOTIFICATION_CLICK"
+                "tag": request_id
             }
         },
         "apns": {
@@ -62,13 +97,15 @@ def send_approval_notification(service_account_path, device_token=None, topic=No
                 "aps": {
                     "alert": {
                         "title": "New Approval Request",
-                        "body": "Please review and approve or reject this request"
+                        "body": "Please review the request from test@example.com"
                     },
                     "badge": 1,
                     "sound": "default",
-                    "category": "APPROVAL_REQUEST"  # For iOS action handling
+                    "category": "APPROVAL_REQUEST",
+                    "mutable-content": 1
                 },
-                "request_id": request_id  # Include in custom data for iOS
+                "requestId": request_id,
+                "type": "approval_request"
             }
         }
     }
@@ -89,32 +126,28 @@ def send_approval_notification(service_account_path, device_token=None, topic=No
         "message": message
     }
     
-    # Print request for debugging
-    print("\nSending FCM request:")
-    print(json.dumps(payload, indent=2))
-    
     # Send the request
     try:
         response = requests.post(fcm_url, headers=headers, data=json.dumps(payload))
         
         if response.status_code == 200:
-            print("\nNotification sent successfully!")
+            print("\n✅ Notification sent successfully!")
             print(response.text)
-            print(f"\nRequest ID for reference: {request_id}")
+            print(f"\nRequest ID: {request_id}")
             
-            # Print Firebase Cloud Messaging testing instructions
             print("\n=== TESTING INSTRUCTIONS ===")
-            print("1. This notification should appear with Approve/Reject buttons")
-            print("2. Try tapping the Approve or Reject button while app is in background")
-            print("3. Check Firebase Console to see if status was updated")
+            print("1. A real document was created in Firestore with ID: " + request_id)
+            print("2. The notification should show Approve/Reject buttons in the background")
+            print("3. Tapping a button will update the document's status in Firestore")
+            print("4. Check Firestore to verify the status changed after tapping a button")
             return True
         else:
-            print("\nFailed to send notification")
+            print("\n❌ Failed to send notification")
             print(f"Status Code: {response.status_code}")
             print(response.text)
             return False
     except Exception as e:
-        print(f"\nError sending notification: {e}")
+        print(f"\n❌ Error sending notification: {e}")
         return False
 
 def get_access_token(service_account_path):

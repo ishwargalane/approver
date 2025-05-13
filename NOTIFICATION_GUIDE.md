@@ -23,10 +23,13 @@ The simplest way to test notifications is to use the bell icon (🔔) in the app
 
 ### Testing with the Python Client
 
-For more realistic testing that simulates production notifications, use the improved Python client:
+For more realistic testing that simulates production notifications, use the improved Python script:
 
-1. Make sure you have a service account key file (JSON) from Firebase
-2. Run the improved Python script:
+```bash
+python python_client/improved_approval_notification.py --service-account path/to/service-account-key.json
+```
+
+To test with a specific device token:
 
 ```bash
 python python_client/improved_approval_notification.py --service-account path/to/service-account-key.json --token YOUR_FCM_TOKEN
@@ -47,12 +50,12 @@ For approval request notifications:
 
 2. When the app is in the **background**:
    - Notification shows in the system tray with Approve/Reject buttons
-   - Tapping a button updates Firestore directly without opening the app
-   - The notification is automatically dismissed after action is taken
+   - Tapping a button should update Firestore directly without opening the app
+   - The notification should be automatically dismissed after action is taken
 
 3. When the app is **closed**:
    - Behavior is the same as when in background
-   - Actions work without needing to start the app
+   - Actions should work without needing to start the app
 
 ### Requirements for Action Buttons to Appear
 
@@ -60,25 +63,54 @@ For a notification to show action buttons, it must:
 
 1. Have a `type` field set to `approval_request` in the FCM payload
 2. Have a `requestId` field with a valid ID
-3. Be constructed properly (see examples in Python scripts)
+3. Be sent properly with the correct payload structure
+4. Have a corresponding document in Firestore with the same ID
 
-## Troubleshooting
+## Current Known Issues and Workarounds
 
-If you're not seeing action buttons:
+### Action Buttons Not Working
 
-1. Check that the notification is properly formatted with `type` and `requestId` fields
-2. Ensure the app has been built with the latest code (with notification action support)
-3. Try using the `improved_approval_notification.py` script for a properly formatted notification
-4. Check logs for any error messages
+If you see the action buttons but tapping them has no effect:
+
+1. **iOS Limitations**: iOS handles notification actions differently from Android. For iOS, you might need to:
+   - Use the UNNotificationServiceExtension to handle background actions
+   - Implement a notification content extension for custom UI
+
+2. **Background Processing**: Ensure background processing is properly enabled:
+   - Check that Firebase is properly initialized in the background handler
+   - Verify the Firestore document exists and has the correct permissions
+   - Make sure your device has network connectivity when tapping the action button
+
+### Troubleshooting Steps
+
+If the action buttons don't work:
+
+1. **Check Logs**: Enable verbose logging in your device/emulator
+2. **Test In-App Actions**: Use the in-app approval interface to confirm permissions are correct
+3. **Verify Document**: Check that the Firestore document exists and is properly structured
+4. **Network State**: Ensure the device has network connectivity
+
+### Manual Testing
+
+If you want to verify the action logic works:
+
+1. Create a test document in Firestore with status "pending"
+2. Use the app to approve/reject directly (not via notification)
+3. Verify the document status updates correctly
 
 ## Platform Notes
 
 - **Android**: Fully supports notification actions in the background
-- **iOS**: Due to iOS limitations, the experience may be different and may require opening the app
+- **iOS**: Due to iOS limitations, full background notification action support may require additional implementation of notification service extensions
 
-## Using in Your Own Code
+## To Fix Current Issues
 
-If you're integrating this into your own code, ensure your FCM payload follows this format:
+For developers working on fixing the notification action issues:
+
+1. Verify the VM entry point annotations are correct
+2. Check Firebase initialization in background handlers
+3. Ensure proper error handling for background actions
+4. Consider implementing a notification service extension for iOS
 
 ```json
 {

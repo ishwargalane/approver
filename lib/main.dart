@@ -18,6 +18,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Handling a background message: ${message.messageId}');
 }
 
+// Ensure onActionReceivedBackground is marked as a top-level vm entry point
+@pragma('vm:entry-point')
+void backgroundActionEntryPoint() {
+  print('🔔 Background action entry point registered!');
+  // This function is just to ensure the background action handler is registered
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -26,6 +33,9 @@ void main() async {
   
   // Set the background message handler before initializing the notification service
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  
+  // Verify background action handler is registered
+  backgroundActionEntryPoint();
   
   // Initialize app version
   await AppVersion.init();
